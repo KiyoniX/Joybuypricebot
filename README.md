@@ -37,7 +37,7 @@ Pour les événements sans date fixe (French Days, campagnes Joybuy…), crée u
 [{"nom": "French Days", "emoji": "🇫🇷", "debut": "2027-04-28", "fin": "2027-05-04"}]
 ```
 
-Il tourne gratuitement sur GitHub Actions. Il ne se connecte jamais au compte du BDE.
+Il tourne sur un mini PC à la maison, avec une tâche cron. Il ne se connecte jamais au compte du BDE.
 
 > ⚠️ Le prix lu est le **prix affiché** sur la page : les coupons à activer et les réductions au panier ne sont pas comptés. Vérifie toujours sur le site avant d'acheter.
 
@@ -45,7 +45,7 @@ Il tourne gratuitement sur GitHub Actions. Il ne se connecte jamais au compte du
 
 ## Mettre à jour la liste des produits
 
-`produits.json` est l'export de la wishlist : une liste de `{"nom", "lien"}`. Quand la wishlist change, remplace le fichier par le nouvel export, directement sur GitHub (crayon ✏️ → coller → *Commit changes*).
+`produits.json` est l'export de la wishlist : une liste de `{"nom", "lien"}`. Quand la wishlist change, remplace le fichier par le nouvel export, directement sur GitHub (crayon ✏️ → coller → *Commit changes*). **Le mini PC récupère la nouvelle liste tout seul au passage suivant** (`git pull` au début de chaque passage).
 
 Pour fixer un prix cible, ajoute `prix_max` (en euros) au produit :
 
@@ -61,56 +61,54 @@ Sans `prix_max`, le produit est quand même suivi pour les plus bas prix, les ba
 
 ---
 
-## Installation
+## Pourquoi pas GitHub Actions ?
 
-### 1. Créer le webhook Discord
-Clic droit sur le salon → **Modifier le salon** → **Intégrations → Webhooks → Nouveau webhook** → **Copier l'URL du webhook**.
+Joybuy répond par un CAPTCHA aux serveurs de GitHub dès la première page : ce sont des IP de datacenter, que le site filtre (vu le 20/11/2026). Le bot tourne donc sur une machine avec une connexion « maison ». Le workflow GitHub n'a plus de passage automatique ; il reste lançable à la main, mais il sera bloqué.
 
-> ⚠️ Garde cette URL secrète : n'importe qui la connaissant peut poster dans ton salon.
+## Installation sur le mini PC (Linux, sans sudo)
 
-### 2. Mettre le projet sur GitHub
-Crée un dépôt et pousse ce dossier dessus.
+Il faut `git` et `python3-venv` (sinon, une fois : `sudo apt install git python3-venv`).
 
-**Dépôt public ou privé ?**
-- **Public** : les minutes de GitHub Actions sont illimitées. Seuls la liste des produits et l'historique des prix sont visibles, et ce sont des infos publiques.
-- **Privé** : 2 000 minutes gratuites par mois. Un passage dure environ 2 à 3 minutes, et GitHub arrondit chaque passage à la minute supérieure. Un passage toutes les 2 heures fait donc environ 1 000 minutes par mois : ça passe.
+```sh
+git clone https://github.com/KiyoniX/Joybuypricebot.git ~/Joybuypricebot
+sh ~/Joybuypricebot/installer.sh
+nano ~/.config/joybuy-bot/env                       # colle l'URL du webhook après DISCORD_WEBHOOK_URL=
+~/Joybuypricebot/lancer.sh --maintenant             # premier passage, tout de suite
+tail -n 50 ~/.local/share/joybuy-bot/joybuy.log     # ce qu'il a fait
+```
 
-### 3. Ajouter le webhook en secret
-**Settings → Secrets and variables → Actions → New repository secret** : nom `DISCORD_WEBHOOK_URL`, valeur l'URL du webhook. Pour poster dans plusieurs salons, mets plusieurs URL dans ce même secret, **une par ligne**.
+`installer.sh` :
+- crée l'environnement Python (`.venv`) ;
+- crée `~/.config/joybuy-bot/env`, lisible par toi seul, pour le webhook ;
+- reprend l'historique du dépôt la première fois ;
+- ajoute la tâche cron : un passage **toutes les 2 heures**, avec un délai aléatoire de 0 à 10 minutes.
 
-### 4. Autoriser le bot à enregistrer l'historique
-Le bot garde les prix vus dans `etat.json` et le commite lui-même, seulement quand un prix ou un stock change.
-**Settings → Actions → General → Workflow permissions → Read and write permissions → Save.**
+Tu peux le relancer sans risque.
 
-### 5. Tester
-**Actions → Joybuy -> Discord → Run workflow.**
+| Où | Quoi |
+|---|---|
+| `~/.config/joybuy-bot/env` | Le webhook (jamais dans le dépôt) et `BAISSE_MIN_PCT` |
+| `~/.local/share/joybuy-bot/etat.json` | L'historique des prix et les annonces déjà postées |
+| `~/.local/share/joybuy-bot/joybuy.log` | Le journal des passages (2 000 dernières lignes) |
 
 Le premier passage enregistre seulement les prix actuels. Il ne poste rien, sauf pour un produit déjà sous son `prix_max`. Les alertes de baisse arrivent à partir des passages suivants.
 
----
-
-## Réglages (optionnel)
-
-Dans **Settings → Secrets and variables → Actions → onglet Variables** :
-- `BAISSE_MIN_PCT` : la baisse minimale qui déclenche une alerte, en % (5 par défaut).
+**Webhook Discord** : clic droit sur le salon → **Modifier le salon** → **Intégrations → Webhooks → Nouveau webhook** → **Copier l'URL du webhook**. Garde cette URL secrète : n'importe qui la connaissant peut poster dans ton salon. Pour poster dans plusieurs salons, mets plusieurs URL séparées par des espaces.
 
 ## Dépannage
 
 | Problème | Solution |
 |---|---|
-| ❌ `DISCORD_WEBHOOK_URL n'est pas défini` | Le secret manque ou est mal nommé (étape 3). |
-| ❌ Erreur au `git push` | Les permissions ne sont pas en lecture et écriture (étape 4). |
-| ⛔ `Bloqué par un CAPTCHA` | Joybuy a jugé qu'il y avait trop de requêtes. Le bot s'arrête aussitôt (le workflow passe en rouge) et réessaie au passage suivant. Le blocage se lève tout seul au bout d'un moment. **Ne relance pas le workflow en boucle** : c'est ce qui le déclenche (vu en test, après environ 200 pages en 30 minutes). Si ça arrive à chaque passage, espace les passages dans `.github/workflows/joybuy.yml`. |
+| ❌ `DISCORD_WEBHOOK_URL n'est pas défini` | La ligne est vide dans `~/.config/joybuy-bot/env`. |
+| ⛔ `Bloqué par un CAPTCHA` | Joybuy a jugé qu'il y avait trop de requêtes depuis ta connexion. Le bot s'arrête aussitôt et réessaie au passage suivant ; le blocage se lève tout seul au bout de quelques heures. **Ne relance pas le bot en boucle pour tester** : c'est ce qui le déclenche (vu en test, après environ 200 pages en 30 minutes). Pour naviguer sur Joybuy pendant ce temps, réponds simplement au CAPTCHA dans ton navigateur. |
 | ⚠️ `données produit (JSON-LD) introuvables` | Joybuy a changé la structure de ses pages, ou le produit n'existe plus. |
-| Le bot ne tourne plus tout seul | GitHub met en pause les workflows programmés après 60 jours sans activité sur le dépôt. Réactive-le dans l'onglet Actions. |
+| Rien dans le journal | Vérifie la tâche avec `crontab -l` (ligne `# joybuy-bot`). |
 
-## Lancer en local
+## Lancer sur ton PC (test)
 
 ```powershell
 pip install -r requirements.txt
 python joybuy_bot.py --dry-run     # affiche les prix et les alertes, sans rien poster ni enregistrer
-$env:DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
-python joybuy_bot.py
 ```
 
 ---

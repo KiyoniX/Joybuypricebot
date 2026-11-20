@@ -1,8 +1,8 @@
 name: Joybuy -> Discord
 
+# Plus de passage automatique : Joybuy répond par un CAPTCHA aux serveurs de GitHub (vu le 20/11/2026).
+# Le bot tourne sur le mini PC (voir README). Ce workflow reste lançable à la main, pour tester.
 on:
-  schedule:
-    - cron: "17 */2 * * *"   # toutes les 2 heures (plus souvent, Joybuy finit par répondre par un CAPTCHA)
   workflow_dispatch:
 
 permissions:

@@ -14,7 +14,8 @@ Usage :
     python joybuy_bot.py             # poste sur le(s) webhook(s) et met à jour etat.json
 
 Variables d'environnement :
-    DISCORD_WEBHOOK_URL  requise (hors --dry-run) : un ou plusieurs webhooks, un par ligne
+    DISCORD_WEBHOOK_URL  requise (hors --dry-run) : un ou plusieurs webhooks (séparés par des espaces ou des lignes)
+    JOYBUY_ETAT          optionnelle : chemin de l'historique des prix (défaut : etat.json à côté du script)
     BAISSE_MIN_PCT       optionnelle : baisse minimale (en %) qui déclenche une alerte (défaut 5)
 
 Le prix lu est le prix affiché sur la page : il ne tient pas compte des coupons à activer.
@@ -39,7 +40,8 @@ import evenements
 PARIS = ZoneInfo("Europe/Paris")
 
 PRODUITS_FILE = Path(__file__).with_name("produits.json")
-ETAT_FILE = Path(__file__).with_name("etat.json")
+# Sur le mini PC, l'historique vit hors du dépôt (JOYBUY_ETAT), pour qu'un `git pull` n'y touche jamais.
+ETAT_FILE = Path(os.environ.get("JOYBUY_ETAT") or Path(__file__).with_name("etat.json"))
 # Navigateur courant : avec un User-Agent de bot, le site répond plus souvent par un CAPTCHA.
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -312,7 +314,8 @@ def post_everywhere(webhooks, embed: dict):
 
 
 def parse_webhooks(var: str) -> list:
-    return [ligne.strip() for ligne in os.environ.get(var, "").splitlines() if ligne.strip()]
+    # Un ou plusieurs webhooks, séparés par des retours à la ligne, des espaces ou des virgules.
+    return [w for w in re.split(r"[\s,]+", os.environ.get(var, "")) if w]
 
 
 def load_json(path: Path, defaut):
