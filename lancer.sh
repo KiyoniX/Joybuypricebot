@@ -22,6 +22,8 @@ if [ "${1:-}" != "--maintenant" ]; then
     sleep $(( $(od -An -N2 -tu2 /dev/urandom) % 600 ))
 fi
 
+touch "$JOURNAL"
+AVANT=$(wc -l <"$JOURNAL")  # pour réafficher seulement ce passage avec --maintenant
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >>"$JOURNAL"
 # Récupère la wishlist et le code à jour (modifiés depuis GitHub).
 git -C "$DOSSIER" pull --ff-only -q >>"$JOURNAL" 2>&1 || echo "(git pull impossible, on continue avec la version locale)" >>"$JOURNAL"
@@ -30,6 +32,11 @@ PYTHON="$DOSSIER/.venv/bin/python"
 [ -x "$PYTHON" ] || PYTHON=python3  # pas de venv : Python du système
 "$PYTHON" "$DOSSIER/joybuy_bot.py" >>"$JOURNAL" 2>&1 || code=$?
 [ "$code" -eq 0 ] || echo "(code de sortie : $code)" >>"$JOURNAL"
+
+# Lancé à la main : on affiche aussi ce passage à l'écran.
+if [ "${1:-}" = "--maintenant" ]; then
+    tail -n +"$((AVANT + 1))" "$JOURNAL"
+fi
 
 # Le journal garde seulement ses 2 000 dernières lignes.
 tail -n 2000 "$JOURNAL" >"$JOURNAL.tmp" && mv "$JOURNAL.tmp" "$JOURNAL"
