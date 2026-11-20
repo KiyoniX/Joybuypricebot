@@ -1,7 +1,7 @@
 name: Joybuy -> Discord
 
 # Plus de passage automatique : Joybuy répond par un CAPTCHA aux serveurs de GitHub (vu le 20/11/2026).
-# Le bot tourne sur le mini PC (voir README). Ce workflow reste lançable à la main, pour tester.
+# Le bot tourne sur le VPS Oracle, dont les IP passent (voir README). Ce workflow reste lançable à la main, pour tester.
 on:
   workflow_dispatch:
 

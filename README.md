@@ -37,7 +37,7 @@ Pour les événements sans date fixe (French Days, campagnes Joybuy…), crée u
 [{"nom": "French Days", "emoji": "🇫🇷", "debut": "2027-04-28", "fin": "2027-05-04"}]
 ```
 
-Il tourne sur un mini PC à la maison, avec une tâche cron. Il ne se connecte jamais au compte du BDE.
+Il tourne sur un serveur Linux (le VPS Oracle du homelab), avec une tâche cron. Il ne se connecte jamais au compte du BDE.
 
 > ⚠️ Le prix lu est le **prix affiché** sur la page : les coupons à activer et les réductions au panier ne sont pas comptés. Vérifie toujours sur le site avant d'acheter.
 
@@ -45,7 +45,7 @@ Il tourne sur un mini PC à la maison, avec une tâche cron. Il ne se connecte j
 
 ## Mettre à jour la liste des produits
 
-`produits.json` est l'export de la wishlist : une liste de `{"nom", "lien"}`. Quand la wishlist change, remplace le fichier par le nouvel export, directement sur GitHub (crayon ✏️ → coller → *Commit changes*). **Le mini PC récupère la nouvelle liste tout seul au passage suivant** (`git pull` au début de chaque passage).
+`produits.json` est l'export de la wishlist : une liste de `{"nom", "lien"}`. Quand la wishlist change, remplace le fichier par le nouvel export, directement sur GitHub (crayon ✏️ → coller → *Commit changes*). **Le serveur récupère la nouvelle liste tout seul au passage suivant** (`git pull` au début de chaque passage).
 
 Pour fixer un prix cible, ajoute `prix_max` (en euros) au produit :
 
@@ -63,11 +63,11 @@ Sans `prix_max`, le produit est quand même suivi pour les plus bas prix, les ba
 
 ## Pourquoi pas GitHub Actions ?
 
-Joybuy répond par un CAPTCHA aux serveurs de GitHub dès la première page : ce sont des IP de datacenter, que le site filtre (vu le 20/11/2026). Le bot tourne donc sur une machine avec une connexion « maison ». Le workflow GitHub n'a plus de passage automatique ; il reste lançable à la main, mais il sera bloqué.
+Joybuy répond par un CAPTCHA aux serveurs de GitHub dès la première page : ce sont des IP de datacenter, que le site filtre (vu le 20/11/2026). Les IP d'Oracle Cloud, elles, passent (testé le 20/11/2026 : 38 produits lus sans CAPTCHA). Le bot tourne donc sur le VPS Oracle. Le workflow GitHub n'a plus de passage automatique ; il reste lançable à la main, mais il sera bloqué.
 
-## Installation sur le mini PC (Linux, sans sudo)
+## Installation sur le serveur (Linux, sans sudo)
 
-Il faut `git` et `python3-venv` (sinon, une fois : `sudo apt install git python3-venv`).
+Il faut `git`, et `python3-venv` **ou** le paquet `python3-requests` (sur le VPS Oracle, `python3-requests` est déjà là : l'installeur utilise alors le Python du système).
 
 ```sh
 git clone https://github.com/KiyoniX/Joybuypricebot.git ~/Joybuypricebot

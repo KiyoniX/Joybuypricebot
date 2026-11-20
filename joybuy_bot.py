@@ -40,7 +40,7 @@ import evenements
 PARIS = ZoneInfo("Europe/Paris")
 
 PRODUITS_FILE = Path(__file__).with_name("produits.json")
-# Sur le mini PC, l'historique vit hors du dépôt (JOYBUY_ETAT), pour qu'un `git pull` n'y touche jamais.
+# Sur le serveur, l'historique vit hors du dépôt (JOYBUY_ETAT), pour qu'un `git pull` n'y touche jamais.
 ETAT_FILE = Path(os.environ.get("JOYBUY_ETAT") or Path(__file__).with_name("etat.json"))
 # Navigateur courant : avec un User-Agent de bot, le site répond plus souvent par un CAPTCHA.
 USER_AGENT = (

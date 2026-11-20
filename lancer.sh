@@ -1,5 +1,5 @@
 #!/bin/sh
-# Lancé par cron toutes les 2 heures sur le mini PC (voir installer.sh).
+# Lancé par cron toutes les 2 heures sur le serveur (voir installer.sh).
 # Lit le webhook dans ~/.config/joybuy-bot/env et garde l'historique dans ~/.local/share/joybuy-bot/.
 set -eu
 
