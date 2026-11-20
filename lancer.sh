@@ -26,7 +26,9 @@ echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >>"$JOURNAL"
 # Récupère la wishlist et le code à jour (modifiés depuis GitHub).
 git -C "$DOSSIER" pull --ff-only -q >>"$JOURNAL" 2>&1 || echo "(git pull impossible, on continue avec la version locale)" >>"$JOURNAL"
 code=0
-"$DOSSIER/.venv/bin/python" "$DOSSIER/joybuy_bot.py" >>"$JOURNAL" 2>&1 || code=$?
+PYTHON="$DOSSIER/.venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON=python3  # pas de venv : Python du système
+"$PYTHON" "$DOSSIER/joybuy_bot.py" >>"$JOURNAL" 2>&1 || code=$?
 [ "$code" -eq 0 ] || echo "(code de sortie : $code)" >>"$JOURNAL"
 
 # Le journal garde seulement ses 2 000 dernières lignes.

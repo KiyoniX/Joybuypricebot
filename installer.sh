@@ -7,13 +7,19 @@ DOSSIER="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_DIR="$HOME/.config/joybuy-bot"
 ETAT_DIR="$HOME/.local/share/joybuy-bot"
 
-# 1. Environnement Python isolé (il faut le paquet python3-venv).
-if ! python3 -m venv "$DOSSIER/.venv" 2>/dev/null; then
-    echo "❌ python3-venv manque. Installe-le une fois : sudo apt install python3-venv" >&2
-    exit 1
+# 1. Environnement Python isolé (paquet python3-venv). À défaut, le Python du système s'il a déjà `requests`.
+if python3 -m venv "$DOSSIER/.venv" >/dev/null 2>&1; then
+    "$DOSSIER/.venv/bin/pip" install -q --upgrade pip
+    "$DOSSIER/.venv/bin/pip" install -q -r "$DOSSIER/requirements.txt"
+else
+    rm -rf "$DOSSIER/.venv"  # venv à moitié créé (ensurepip absent)
+    if python3 -c "import requests, zoneinfo; zoneinfo.ZoneInfo('Europe/Paris')" 2>/dev/null; then
+        echo "ℹ️  python3-venv absent : le bot utilisera le Python du système (requests y est déjà)."
+    else
+        echo "❌ Il faut python3-venv, ou le paquet python3-requests. Une fois : sudo apt install python3-venv" >&2
+        exit 1
+    fi
 fi
-"$DOSSIER/.venv/bin/pip" install -q --upgrade pip
-"$DOSSIER/.venv/bin/pip" install -q -r "$DOSSIER/requirements.txt"
 chmod +x "$DOSSIER/lancer.sh"
 
 # 2. Configuration : le webhook reste hors du dépôt, lisible par toi seul.
