@@ -1,0 +1,36 @@
+name: Joybuy -> Discord
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"   # toutes les 2 heures (plus souvent, Joybuy finit par répondre par un CAPTCHA)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: joybuy-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python joybuy_bot.py
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BAISSE_MIN_PCT: ${{ vars.BAISSE_MIN_PCT }}
+      - name: Sauvegarder l'historique des prix
+        if: always()
+        run: |
+          git config user.name "joybuy-bot"
+          git config user.email "joybuy-bot@users.noreply.github.com"
+          git add $(ls etat.json 2>/dev/null)
+          git diff --cached --quiet || git commit -m "Mise à jour des prix"
+          git push
