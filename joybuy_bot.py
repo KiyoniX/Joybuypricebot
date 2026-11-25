@@ -300,6 +300,43 @@ def build_rappel(ev: dict, etape: str, produits: list, etat: dict) -> dict:
     }
 
 
+def fmt_duree(depuis: str, maintenant: datetime) -> str:
+    heures = int((maintenant - datetime.fromisoformat(depuis)).total_seconds() // 3600)
+    return f"{heures // 24} j {heures % 24} h" if heures >= 24 else f"{heures} h"
+
+
+def suivre_panne(etat: dict, cause, lus: int, total: int, maintenant: datetime):
+    """Note le début et la fin d'une panne dans l'état et renvoie le message à poster, ou None.
+
+    Un seul message au début de la panne (CAPTCHA ou pages illisibles), un seul quand le bot relit des prix :
+    sur le serveur personne ne regarde le journal, Discord est le seul moyen de savoir que ça ne marche plus.
+    `cause` vaut "captcha", "illisible" ou None si le passage s'est bien passé.
+    """
+    panne = etat.get("_panne")
+    if cause and not panne:
+        etat["_panne"] = {"depuis": maintenant.isoformat(timespec="seconds"), "cause": cause}
+        if cause == "captcha":
+            titre = "⛔ Bot bloqué par un CAPTCHA de Joybuy"
+            texte = (f"Joybuy a répondu par un CAPTCHA après {lus} produit(s) lu(s) sur {total}. "
+                     "Le bot réessaie à chaque passage (toutes les 2 h), sans insister ; "
+                     "en attendant, **plus aucune alerte de prix ne part**.\n"
+                     "Un message suivra dès qu'il relira les prix.")
+        else:
+            titre = "⚠️ Bot : aucune page produit lisible"
+            texte = (f"Aucun des {total} produits n'a pu être lu : Joybuy a peut-être changé ses pages. "
+                     "Détails dans le journal du serveur (`~/.local/share/joybuy-bot/joybuy.log`).\n"
+                     "Un message suivra dès qu'il relira les prix.")
+        return {"title": titre, "description": texte, "color": 0xE74C3C,
+                "footer": {"text": footer_calendrier()}, "timestamp": maintenant.isoformat()}
+    if not cause and panne and lus:
+        del etat["_panne"]
+        return {"title": "✅ Le bot lit à nouveau les prix",
+                "description": f"{lus} produit(s) lu(s) sur {total}, après {fmt_duree(panne['depuis'], maintenant)} "
+                               "de panne. Les alertes de prix reprennent.",
+                "color": 0x2ECC71, "footer": {"text": footer_calendrier()}, "timestamp": maintenant.isoformat()}
+    return None
+
+
 def post_everywhere(webhooks, embed: dict):
     payload = {"username": "Joybuy Bot", "embeds": [embed]}
     for i, webhook in enumerate(webhooks, 1):
@@ -348,7 +385,7 @@ def main():
         sys.exit("❌ produits.json est vide : ajoute au moins un produit.")
     etat = load_json(ETAT_FILE, {})
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    echecs, bloque = 0, False
+    echecs, lus, bloque = 0, 0, False
 
     for n, produit in enumerate(produits):
         if n:
@@ -366,6 +403,7 @@ def main():
             print(f"⚠️ {produit.get('nom') or produit['url']} : {exc}", file=sys.stderr)
             continue
 
+        lus += 1
         suivi = etat.setdefault(pid, {})
         ancien = (suivi.get("dernier") or {}).get("prix")
         alertes = detect_alerts(produit, releve, suivi, baisse_min_pct)
@@ -381,6 +419,15 @@ def main():
             else:
                 post_everywhere(webhooks, embed)
 
+    # Prévient sur Discord au début et à la fin d'une panne (une seule fois chacune).
+    cause = "captcha" if bloque else ("illisible" if echecs == len(produits) else None)
+    message_panne = suivre_panne(etat, cause, lus, len(produits), datetime.now(timezone.utc))
+    if message_panne:
+        if args.dry_run:
+            print(f"  [dry-run] posterait : {message_panne['title']}")
+        else:
+            post_everywhere(webhooks, message_panne)
+
     # Annonce des grands événements de remises (J-7, J-1, jour J), une seule fois chacune.
     deja = etat.setdefault("_rappels", [])
     rappel = evenements.rappel_a_poster(datetime.now(PARIS).date(), deja)
@@ -388,6 +435,10 @@ def main():
     if rappel:
         ev, etape, cles = rappel
         embed = build_rappel(ev, etape, produits, etat)
+        if etat.get("_panne"):  # l'annonce s'appuie sur des prix anciens : on le dit
+            debut = datetime.fromisoformat(etat["_panne"]["depuis"]).astimezone(PARIS)
+            embed["fields"].append({"name": "⚠️ Prix pas à jour",
+                                    "value": f"Le bot n'arrive plus à lire les prix depuis le {debut:%d/%m à %H:%M}."})
         if args.dry_run:
             print(f"  [dry-run] posterait l'annonce : {embed['title']}")
         else:
@@ -398,7 +449,7 @@ def main():
     if not args.dry_run:
         save_json(ETAT_FILE, etat)
     if bloque:
-        sys.exit("❌ Bloqué par un CAPTCHA de Joybuy (le workflow passe en rouge pour te prévenir).")
+        sys.exit("❌ Bloqué par un CAPTCHA de Joybuy (prévenu sur Discord au premier passage bloqué).")
     if echecs == len(produits):
         sys.exit("❌ Aucun produit n'a pu être lu.")
 

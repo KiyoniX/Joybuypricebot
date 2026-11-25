@@ -100,8 +100,8 @@ Le premier passage enregistre seulement les prix actuels. Il ne poste rien, sauf
 | Problème | Solution |
 |---|---|
 | ❌ `DISCORD_WEBHOOK_URL n'est pas défini` | La ligne est vide dans `~/.config/joybuy-bot/env`. |
-| ⛔ `Bloqué par un CAPTCHA` | Joybuy a jugé qu'il y avait trop de requêtes depuis ta connexion. Le bot s'arrête aussitôt et réessaie au passage suivant ; le blocage se lève tout seul au bout de quelques heures. **Ne relance pas le bot en boucle pour tester** : c'est ce qui le déclenche (vu en test, après environ 200 pages en 30 minutes). Pour naviguer sur Joybuy pendant ce temps, réponds simplement au CAPTCHA dans ton navigateur. |
-| ⚠️ `données produit (JSON-LD) introuvables` | Joybuy a changé la structure de ses pages, ou le produit n'existe plus. |
+| ⛔ `Bloqué par un CAPTCHA` | Joybuy a jugé qu'il y avait trop de requêtes depuis ta connexion. Le bot s'arrête aussitôt, **poste « ⛔ Bot bloqué » sur Discord** (une seule fois) et réessaie au passage suivant ; il poste « ✅ Le bot lit à nouveau les prix » quand ça repart. Le blocage peut se lever au bout de quelques heures, mais il a déjà duré plusieurs jours (du 20/11/2026 au moins jusqu'au 25/11 sur le VPS Oracle). **Ne relance pas le bot en boucle pour tester** : c'est ce qui le déclenche (vu en test, après environ 200 pages en 30 minutes). Pour naviguer sur Joybuy pendant ce temps, réponds simplement au CAPTCHA dans ton navigateur. |
+| ⚠️ `données produit (JSON-LD) introuvables` | Joybuy a changé la structure de ses pages, ou le produit n'existe plus. Si aucun produit n'est lisible, le bot le signale aussi sur Discord. |
 | Rien dans le journal | Vérifie la tâche avec `crontab -l` (ligne `# joybuy-bot`). |
 
 ## Lancer sur ton PC (test)
